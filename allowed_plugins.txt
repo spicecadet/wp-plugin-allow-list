@@ -1,0 +1,3 @@
+megamenu/megamenu.php
+debug-bar/debug-bar.php
+debug-bar-actions-and-filters-addon/debug-bar-action-and-filters-addon.php
