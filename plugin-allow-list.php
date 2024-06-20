@@ -22,15 +22,12 @@ if ( ! defined( 'ABSPATH' ) ) {
 function restrict_plugin_activation() {
 
 	$transient = store_allow_list_transient( 'file' );
-	// error_log( 'Transient: ' . print_r( $transient, true ) );
 
 	/** Get active plugins */
 	$active_plugins = get_option( 'active_plugins' );
-	// error_log( 'Active Plugins: ' . print_r( $active_plugins, true ) );
 
 	/** Scan active plugins against whitelist */
 	foreach ( $active_plugins as $plugin ) {
-		// error_log( 'Plugin Loop: ' . $plugin );
 		if ( ! in_array( $plugin, $transient, true ) ) {
 
 			deactivate_plugins( $plugin );
@@ -138,12 +135,25 @@ function enqueue_plugin_allow_list_script() {
 	wp_register_script( 'plugin_allow_list_script', plugin_dir_path( __FILE__ ) . '/js/wp_plugin_allow_list.js', array( 'jquery' ), '1.0.0', true );
 	wp_enqueue_script( 'plugin_allow_list_script' );
 
+	// Todo: change to wp_add_inline_script().
 	wp_localize_script(
 		'plugin_allow_list_script',
 		'ajax_object',
 		array(
 			'ajax_url' => admin_url( 'admin-ajax.php' ),
 			'nonce'    => wp_create_nonce( 'refresh-plugin-allow-list-nonce' ),
+		)
+	);
+	wp_register_script( 'allow_list_method_toggle', plugin_dir_path( __FILE__ ) . '/js/wp_plugin_allow_list_method_toggle.js', array( 'jquery' ), '1.0.0', true );
+	wp_enqueue_script( 'allow_list_method_toggle' );
+
+	// Todo: change to wp_add_inline_script().
+	wp_localize_script(
+		'allow_list_method_toggle',
+		'ajax_object',
+		array(
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'nonce'    => wp_create_nonce( 'allow_list_method_toggle-nonce' ),
 		)
 	);
 }
@@ -206,3 +216,30 @@ function refresh_plugin_allow_list() {
 
 // refresh plugin allow list via admin-ajax.
 add_action( 'wp_ajax_refresh_plugin_allow_list', 'refresh_plugin_allow_list' );
+
+/**
+ * Refresh plugin allow list by deleting the transient via admin-ajax
+ *
+ * @since  1.0
+ */
+function allow_list_method_toggle() {
+
+	wp_verify_nonce( 'security', 'allow-list-method-toggle-nonce' );
+	$allow_list_method = get_transient( 'allow_list_method' );
+
+	if ( false === ( $allow_list_method ) ) {
+		do_action( add_option( 'allow_list_method', '' ) );
+	}
+
+	do_action( update_option( 'allow_list_method', 'file', false ) );
+	$response = array( 'message' => 'Allow List Method Changed' );
+
+	// Send the response.
+	wp_send_json( $response );
+
+	// Exit to prevent extra output.
+	exit();
+}
+
+// refresh plugin allow list via admin-ajax.
+add_action( 'wp_ajax_refresh_plugin_allow_list', 'allow_list_method_toggle' );
