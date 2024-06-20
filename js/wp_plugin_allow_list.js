@@ -8,9 +8,10 @@ jQuery(document).ready(function($) {
                 nonce: ajax_object.nonce
             },
             success: function(response) {
-                console.log("test from js: " + ajaxurl)
+                console.log("refresh plugin list clicked: " + ajaxurl)
                 console.log(response);
             },
         });
     });
 });
+
