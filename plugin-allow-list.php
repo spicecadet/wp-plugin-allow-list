@@ -150,10 +150,10 @@ function enqueue_plugin_allow_list_script() {
 	// Todo: change to wp_add_inline_script().
 	wp_localize_script(
 		'allow_list_method_toggle',
-		'ajax_object',
+		'ajax_object2',
 		array(
 			'ajax_url' => admin_url( 'admin-ajax.php' ),
-			'nonce'    => wp_create_nonce( 'allow_list_method_toggle-nonce' ),
+			'nonce'    => wp_create_nonce( 'allow-list-method-toggle-nonce' ),
 		)
 	);
 }
@@ -186,7 +186,7 @@ function wp_plugin_allow_list_admin_page() {
 	<div class="wrap">
 		<h2>Plugin allow list configuration</h2>
 		<p><button class="button button-primary" id="refresh-plugin-allow-list-button" type="submit">Refresh Plugin Allow List</button></p>
-		<p><input type="checkbox" class="checkbox" id="load-allow-list-from-file-button" type="submit">Load Allow List From File</input></p>
+		<p><input name="allow-list-method" type="checkbox" class="checkbox" id="allow-list-method-toggle" type="submit">Load Allow List From File</input></p>
 	</div>
 	<?php
 }
@@ -225,13 +225,17 @@ add_action( 'wp_ajax_refresh_plugin_allow_list', 'refresh_plugin_allow_list' );
 function allow_list_method_toggle() {
 
 	wp_verify_nonce( 'security', 'allow-list-method-toggle-nonce' );
-	$allow_list_method = get_transient( 'allow_list_method' );
+	$allow_list_method = get_option( 'allow_list_method' );
 
 	if ( false === ( $allow_list_method ) ) {
-		do_action( add_option( 'allow_list_method', '' ) );
+		do_action( add_option( 'allow_list_method' ) );
 	}
 
-	do_action( update_option( 'allow_list_method', 'file', false ) );
+	if ( 'url' === ( $allow_list_method ) ) {
+		do_action( update_option( 'allow_list_method', 'file', false ) );
+	} else {
+		do_action( update_option( 'allow_list_method', 'url', false ) );
+	}
 	$response = array( 'message' => 'Allow List Method Changed' );
 
 	// Send the response.
@@ -241,5 +245,5 @@ function allow_list_method_toggle() {
 	exit();
 }
 
-// refresh plugin allow list via admin-ajax.
-add_action( 'wp_ajax_refresh_plugin_allow_list', 'allow_list_method_toggle' );
+// Toggle the allow list method loading method.
+add_action( 'wp_ajax_allow_list_method_toggle', 'allow_list_method_toggle' );

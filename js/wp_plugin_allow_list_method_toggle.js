@@ -1,7 +1,9 @@
 jQuery(document).ready(function($) {
-    $('#allow_list_method_toggle-button').click(function() {
+    $('#allow-list-method-toggle').click(function() {
+        alert( 'clicked' );
+        $("input[name=allow-list-method\\[\\]]").trigger('click');
         $.ajax({
-            url: ajax_object.ajax_url,
+            url: ajax_object2.ajax_url,
             type: 'POST',
             data: {
                 action: 'allow_list_method_toggle',
