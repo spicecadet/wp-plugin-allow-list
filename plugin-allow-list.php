@@ -15,45 +15,99 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit; // disable direct access.
 }
 /**
- * Restrict activation for plugins that are not on the allow list.
+ * Setup functions for the allow list
  *
+ * @return array $allow_list
  * @since  1.0
  */
-function restrict_plugin_activation() {
+function plugin_allow_list_init() {
 
-	$transient = store_allow_list_transient( 'file' );
+	set_allow_list_method();
 
-	/** Get active plugins */
-	$active_plugins = get_option( 'active_plugins' );
+	if( false === $allow_list_message_status = get_option( 'allow_list_message_status' ) ) {
+		add_option( 'allow_list_message_status', 'init', '', false );		 
+	}
 
-	/** Scan active plugins against whitelist */
-	foreach ( $active_plugins as $plugin ) {
-		if ( ! in_array( $plugin, $transient, true ) ) {
-
-			deactivate_plugins( $plugin );
-			do_action( restrict_plugin_activation_notice( 'not_whitelisted' ) );
-		}
+	if( 'not_whitelisted' === $allow_list_message_status ) {
+		add_action( 'admin_head', 'allow_list_admin_css' );
+		plugin_allow_list_admin_notice( $allow_list_message_status );
+		update_option( 'allow_list_message_status', 'init' );
 	}
 }
 
+/**
+ * CSS styles to hide plugin activated admin notices. 
+ * 
+ * Todo - Note: this could hide other notices with the #message id 
+ * @since 1.0
+ */
+
+function allow_list_admin_css() {
+	echo '<style id="plugin-allow-list-inline-css">#message { display: none }</style>';
+}
+
+add_action( 'admin_init', 'plugin_allow_list_init' );
+
 // Restrict plugins based on allow list in the admin dashboard.
-add_action( 'admin_init', 'restrict_plugin_activation' );
+
+function set_allow_list_method() {
+	// Set the default method to load the allow list from a URL
+	
+	if( false === $allow_list_method = get_option( 'allow_list_method' ) ) {
+		add_option( 'allow_list_method', 'url', '', false );
+		error_log( "Allow list method set: $allow_list_method" );
+	} 
+	//error_log( 'Allow list method: ' . $allow_list_method );
+
+	//Todo: Is this needed?
+	return $allow_list_method;
+}
+
+// Todo: doesn't seem to be working after refresh. Could need
+function get_allow_list( $allow_list_method ) {
+	// Stores the allow list transient based on the allow_list_method option if the transient has expired or is unset
+	if( false === $allow_list_transient = get_transient( 'allow_listed_plugins' ) ) {
+		$allow_list_transient = set_allow_list_transient( $allow_list_method );
+		error_log( print_r( $allow_list_transient, true ) );
+	}
+
+	return $allow_list_transient;
+}
+
+function detect_plugin_activation( $allow_list_method ) { 
+	error_log( "Activated Plugin Hook Fired" );
+
+	$active_plugins = get_option( 'active_plugins');
+	// Todo: This will be false if refresh allow list is clicked and throw an error. Add error handling.
+	$allow_list = get_allow_list( $allow_list_method );
+	error_log( print_r( $active_plugins, true ) );
+
+	/** Scan active plugins against whitelist */
+	foreach ( $active_plugins as $plugin ) {
+		if ( ! in_array( $plugin, $allow_list, true ) ) {
+			error_log( "Plugin not on list: $plugin" );
+			deactivate_plugins( $plugin );
+			update_option( 'allow_list_message_status', 'not_whitelisted' );
+		}
+	}
+}
+add_action( 'activated_plugin', 'detect_plugin_activation', 'url' );
 
 /**
- * Display notice in WP admin.
+ * Display admin notice in the dashboard.
  *
  * @param string $message_topic This is the type of message to be displayed.
  * @since  1.0
  */
-function restrict_plugin_activation_notice( $message_topic ) {
+function plugin_allow_list_admin_notice( $message_topic ) {
 
 	?>
-	<div class="notice error restrict-plugin_activation is-dismissible" >
+<div class="notice notice-info is-dismissible plugin-allow-list-admin-notice" >
 		<p>
 			<?php
 			switch ( $message_topic ) {
 				case 'not_whitelisted' === $message_topic:
-					esc_html_e( 'The plugin you attempted to activate is not whitelisted and has been deactivated.', 'plugin_whitelist' );
+					esc_html_e( 'The plugin you attempted to activate is not allowed and has been deactivated.', 'plugin_whitelist' );
 					break;
 				case 'list_refreshed' === $message_topic:
 					esc_html_e( 'The allow list has been refreshed.', 'plugin_whitelist' );
@@ -69,25 +123,18 @@ function restrict_plugin_activation_notice( $message_topic ) {
 }
 
 /**
- * Test function to understand how return works
+ * Store the allow list in a transient based on method
  *
- * @param string $method This is the method which is used for loading the allow list - "url" or "file".
- * @return array $transient
+ * @param string $method The method is used for loading the allow list - "url" or "file".
  * @since 1.0
  */
-function store_allow_list_transient( $method ) {
+function set_allow_list_transient( $method ) {
 
-	$transient = get_transient( 'allow_listed_plugins' );
-
-	if ( false === ( $transient ) ) {
-
-		if ( 'url' === $method ) {
-			load_allow_list_from_url();
-		} else {
-			load_allow_list_from_file();
-		}
+	if ( 'url' === $method ) {
+		load_allow_list_from_url();
+	} else {
+		load_allow_list_from_file();
 	}
-	return $transient;
 }
 
 /**
@@ -97,7 +144,7 @@ function store_allow_list_transient( $method ) {
  */
 function load_allow_list_from_url() {
 
-	$data = load_file( 'https://gist.githubusercontent.com/spicecadet/3a2e1156a86a686aed34d2865703eb59/raw/64e7a6c1ab4d75f75b8d96cd126245fabb48a0e2/plugin-whitelist.txt' );
+	$data = load_file( 'https://gist.githubusercontent.com/spicecadet/3a2e1156a86a686aed34d2865703eb59/raw/f92960567ade23c077c1427ef17969b9f5e2ac60/plugin-whitelist.txt' );
 	set_transient( 'allow_listed_plugins', $data, DAY_IN_SECONDS );
 }
 /**
@@ -162,6 +209,15 @@ function enqueue_plugin_allow_list_script() {
 add_action( 'admin_enqueue_scripts', 'enqueue_plugin_allow_list_script' );
 
 /**
+ * Register and enqueue styles for the admin panel in the dashboard.
+ */
+function enqueue_plugin_allow_list_admin_styles() {
+	wp_register_style( 'plugin_allow_list_wp_admin_css', plugin_dir_path( __FILE__ )  . '/css/plugin-allow-list-admin-panel.css', false, '1.0.0' );
+	wp_enqueue_style( 'plugin_allow_list_wp_admin_css' );
+}
+add_action( 'admin_enqueue_scripts', 'enqueue_plugin_allow_list_admin_styles' );
+
+/**
  * Add admin menu page.
  *
  * @since  1.0
@@ -169,7 +225,6 @@ add_action( 'admin_enqueue_scripts', 'enqueue_plugin_allow_list_script' );
 function plugin_allow_list_menu() {
 	add_menu_page( 'WP Plugin Allow List', 'WP Plugin Allow List', 'manage_options', 'wp_plugin_allow_list', 'wp_plugin_allow_list_admin_page' );
 }
-
 
 /**
  * Plugin allow list admin page content.
@@ -184,9 +239,21 @@ function wp_plugin_allow_list_admin_page() {
 
 	?>
 	<div class="wrap">
-		<h2>Plugin allow list configuration</h2>
-		<p><button class="button button-primary" id="refresh-plugin-allow-list-button" type="submit">Refresh Plugin Allow List</button></p>
-		<p><input name="allow-list-method" type="checkbox" class="checkbox" id="allow-list-method-toggle" type="submit">Load Allow List From File</input></p>
+		<h2>Plugin Allow List Settings</h2>
+	</div>
+	<div class="wrap">
+		<label><h3>Refresh the Plugin Allow List</h3></label>
+		<p>The Plugin Allow List has an expiration of 24 hours and will be refreshed automatically. This button provides a way to manually update the Plugin Allow List if changes are made.</p>
+		<p><button class="button button-primary" id="refresh-plugin-allow-list-button" type="submit">Refresh</button></p>
+
+	</div>
+	<div class="wrap">
+		<label><h3>Plugin Allow List loading method</h3></label>
+		<p>The Plugin Allow List can be loaded from either a remote url or a local file. The allow list is required to be text file with plugins listed on their own line. The local file can be added to the main plugin directory and named allowed_plugins.txt. An example file is included.</p>
+		<p>These loading options allow for the Plugin Allow List to be either centrally managed in a single file via URL or stored locallay with your WordPress codebase. The URL option is meant to manage multiple sites with the same allow list, while the file option allows a unique list to be applied to a single site.</p>   
+		<p>
+			<input name="allow-list-method" type="checkbox" class="checkbox" id="allow-list-method-toggle" type="submit"/><label id="allow-list-method-toggle-label">Allow List loaded from URL</label>
+		</p>
 	</div>
 	<?php
 }
@@ -195,7 +262,7 @@ function wp_plugin_allow_list_admin_page() {
 add_action( 'admin_menu', 'plugin_allow_list_menu' );
 
 /**
- * Refresh plugin allow list by deleting the transient via admin-ajax
+ * Refresh the allow list by deleting the transient via admin-ajax
  *
  * @since  1.0
  */
@@ -204,12 +271,14 @@ function refresh_plugin_allow_list() {
 	wp_verify_nonce( 'security', 'refresh-plugin-allow-list-nonce' );
 
 	do_action( delete_transient( 'allow_listed_plugins' ) );
-	do_action( load_allow_list_from_url() ); // loading the list directly from the file for now.
+	$allow_list_method = get_option( 'allow_list_method' );
+	set_allow_list_transient( $allow_list_method );
+
 	$response = array( 'message' => 'Transient Deleted' );
 
 	// Send the response.
 	wp_send_json( $response );
-
+	
 	// Exit to prevent extra output.
 	exit();
 }
@@ -223,23 +292,23 @@ add_action( 'wp_ajax_refresh_plugin_allow_list', 'refresh_plugin_allow_list' );
  * @since  1.0
  */
 function allow_list_method_toggle() {
-
+	
 	wp_verify_nonce( 'security', 'allow-list-method-toggle-nonce' );
-	$allow_list_method = get_option( 'allow_list_method' );
-
-	if ( false === ( $allow_list_method ) ) {
-		do_action( add_option( 'allow_list_method' ) );
-	}
-
+	$allow_list_method= $_POST['value'];
+	
+	// Set allow list method to file if it's not been set since this is triggered by a click to toggle method to file.
 	if ( 'url' === ( $allow_list_method ) ) {
-		do_action( update_option( 'allow_list_method', 'file', false ) );
-	} else {
 		do_action( update_option( 'allow_list_method', 'url', false ) );
+		error_log( 'Allow lit method changed to url' );
+	} else {
+		do_action( update_option( 'allow_list_method', 'file', false ) );
+		error_log( 'Allow lit method changed to file' );
 	}
-	$response = array( 'message' => 'Allow List Method Changed' );
+	
+	//$response = array( 'message' => 'Allow List Method Changed' );
 
 	// Send the response.
-	wp_send_json( $response );
+	//wp_send_json( $response );
 
 	// Exit to prevent extra output.
 	exit();
