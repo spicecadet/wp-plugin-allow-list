@@ -19,8 +19,8 @@ jQuery(document).ready(function($) {
                 value: this.value
             },
             success: function(response, data) {
-                console.log("allow_list_method_clicked_js: " + data)
-                console.log(response);
+                console.log("allow_list_method_clicked_js: " + data )
+                $('#ajax-response').html(response.message);
             },
             error: function(errorThrown){
                 console.log(errorThrown);

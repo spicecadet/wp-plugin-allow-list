@@ -57,13 +57,8 @@ function set_allow_list_method() {
 		add_option( 'allow_list_method', 'url', '', false );
 		error_log( "Allow list method set: $allow_list_method" );
 	} 
-	//error_log( 'Allow list method: ' . $allow_list_method );
-
-	//Todo: Is this needed?
-	return $allow_list_method;
 }
 
-// Todo: doesn't seem to be working after refresh. Could need
 function get_allow_list( $allow_list_method ) {
 	// Stores the allow list transient based on the allow_list_method option if the transient has expired or is unset
 	if( false === $allow_list_transient = get_transient( 'allow_listed_plugins' ) ) {
@@ -78,7 +73,6 @@ function detect_plugin_activation( $allow_list_method ) {
 	error_log( "Activated Plugin Hook Fired" );
 
 	$active_plugins = get_option( 'active_plugins');
-	// Todo: This will be false if refresh allow list is clicked and throw an error. Add error handling.
 	$allow_list = get_allow_list( $allow_list_method );
 	error_log( print_r( $active_plugins, true ) );
 
@@ -254,6 +248,7 @@ function wp_plugin_allow_list_admin_page() {
 		<p>
 			<input name="allow-list-method" type="checkbox" class="checkbox" id="allow-list-method-toggle" type="submit"/><label id="allow-list-method-toggle-label">Allow List loaded from URL</label>
 		</p>
+		<p id="ajax-response"></p>
 	</div>
 	<?php
 }
@@ -305,10 +300,10 @@ function allow_list_method_toggle() {
 		error_log( 'Allow lit method changed to file' );
 	}
 	
-	//$response = array( 'message' => 'Allow List Method Changed' );
+	$response = array( 'message' => 'Allow List Method Changed' );
 
 	// Send the response.
-	//wp_send_json( $response );
+	wp_send_json( $response );
 
 	// Exit to prevent extra output.
 	exit();
