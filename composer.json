@@ -1,0 +1,13 @@
+{
+    "autoload": {
+        "psr-4": {
+            "ET\\WPPluginAllowList\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Edmund Turbin",
+            "email": "edmund.turbin@gmail.com"
+        }
+    ] 
+}
