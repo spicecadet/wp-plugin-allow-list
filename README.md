@@ -5,7 +5,7 @@ WP Plugin Allow List is a Must Use plugin for WordPress that restricts plugins t
 If the allow list changes, the transient can be refreshed in the WP Plugin Allow List admin page which is accessible from the WordPress sidebar.
 
 ## Installation
-Download or clone the repository and move the entire folder to your MU plugins directory: https://github.com/spicecadet/wp_plugin_allow_list
+Download or clone the repository and move the entire folder to your MU plugins directory: https://github.com/spicecadet/wp-plugin-allow-list
 
 Add the following line to **/wp-content/mu-plugins/loader.php**
 
