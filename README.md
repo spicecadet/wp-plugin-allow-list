@@ -10,5 +10,5 @@ Download or clone the repository and move the entire folder to your MU plugins d
 Add the following line to **/wp-content/mu-plugins/loader.php**
 
 ```
-require WPMU_PLUGIN_DIR . '/wp_plugin_allow_list/plugin-allow-list.php';
+require WPMU_PLUGIN_DIR . '/wp-plugin-allow-list/wp-plugin-allow-list.php';
 ```
