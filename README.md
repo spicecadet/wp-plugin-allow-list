@@ -7,8 +7,4 @@ If the allow list changes, the transient can be refreshed in the WP Plugin Allow
 ## Installation
 Download or clone the repository and move the entire folder to your MU plugins directory: https://github.com/spicecadet/wp-plugin-allow-list
 
-Add the following line to **/wp-content/mu-plugins/loader.php**
-
-```
-require WPMU_PLUGIN_DIR . '/wp-plugin-allow-list/wp-plugin-allow-list.php';
-```
+Copy the file wp-plugin-allow-list-loader.php to the MU directory: **/wp-content/mu-plugins/**
