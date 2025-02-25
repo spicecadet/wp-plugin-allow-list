@@ -1,19 +1,24 @@
 jQuery(document).ready(function($) {
+
+    // Click the refresh button to trigger function
     $('#refresh-plugin-allow-list-button').click(function() {
-        
-        $('#allow-list-refresh-label').html('Allow List refreshed');
 
         $.ajax({
             url: ajax_object.ajax_url,
             type: 'POST',
+            dataType: 'json',
             data: {
                 action: 'allow_list_refresh',
                 nonce: ajax_object.nonce
             },
             success: function(response) {
-                console.log("refresh plugin list clicked: " + ajaxurl)
-                console.log(response);
+                $('#allow-list-refresh-label').html('Allow List refreshed');
+                console.log(response.message);
             },
+            error: function(errorThrown){
+                console.log('allow list refresh error');
+                console.log(errorThrown);
+            }
         });
     });
 });

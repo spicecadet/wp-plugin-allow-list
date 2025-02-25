@@ -14,9 +14,9 @@
 // Exit if accessed directly.
 defined( 'ABSPATH' ) || exit;
 
-require __DIR__ . '/vendor/autoload.php';
-
 use ET\WPPluginAllowList\WPPluginAllowList;
+
+require __DIR__ . '/vendor/autoload.php';
 
 $wp_plugin_allow_list = new WPPluginAllowList();
 $wp_plugin_allow_list->init();

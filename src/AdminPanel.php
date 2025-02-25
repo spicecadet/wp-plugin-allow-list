@@ -89,46 +89,49 @@ class AdminPanel {
 	 * @since  1.0
 	 */
 	public function enqueue_plugin_allow_list_scripts() {
-		// This uses $_GET and would ideally leverage a more WordPress specific way of getting the menu slug.
-		// @codingStandardsIgnoreStart
-		if ( 'wp-plugin-allow-list' === isset( $_GET['page'] ) && $_GET['page'] ) {
-		// @codingStandardsIgnoreEnd
 
-			wp_register_script( 'allow_list_refresh', plugin_dir_path( __FILE__ ) . 'assets/js/wp_plugin_allow_list_refresh.js', array( 'jquery' ), '1.0.0', true );
-			wp_enqueue_script( 'allow_list_refresh' );
+		# Register and enque scripts only if we're on the wp-plugin-allow-list admin page
+		if (isset($_GET['page'])){
+			$current_page_slug = sanitize_text_field($_GET['page']);
 
-			wp_localize_script(
-				'allow_list_refresh',
-				'ajax_object',
-				array(
-					'ajax_url' => admin_url( 'admin-ajax.php' ),
-					'nonce'    => wp_create_nonce( 'allow-list-refresh-nonce' ),
-				)
-			);
+			if( 'wp-plugin-allow-list' == $current_page_slug){
+				wp_register_script( 'allow_list_refresh', plugin_dir_path( __FILE__ ) . 'assets/js/wp_plugin_allow_list_refresh.js', array( 'jquery' ), '1.0.0', true );
+				wp_enqueue_script( 'allow_list_refresh' );
 
-			wp_register_script( 'allow_list_method_toggle', plugin_dir_path( __FILE__ ) . 'assets/js/wp_plugin_allow_list_method_toggle.js', array( 'jquery' ), '1.0.0', true );
-			wp_enqueue_script( 'allow_list_method_toggle' );
+				wp_localize_script(
+					'allow_list_refresh',
+					'ajax_object',
+					array(
+						'ajax_url' => admin_url( 'admin-ajax.php' ),
+						'nonce'    => wp_create_nonce( 'allow-list-refresh-nonce' ),
+					)
+				);
 
-			wp_localize_script(
-				'allow_list_method_toggle',
-				'ajax_object2',
-				array(
-					'ajax_url' => admin_url( 'admin-ajax.php' ),
-					'nonce'    => wp_create_nonce( 'allow-list-method-toggle-nonce' ),
-				)
-			);
+				wp_register_script( 'allow_list_method_toggle', plugin_dir_path( __FILE__ ) . 'assets/js/wp_plugin_allow_list_method_toggle.js', array( 'jquery' ), '1.0.0', true );
+				wp_enqueue_script( 'allow_list_method_toggle' );
 
-			wp_register_script( 'allow_list_method_default', plugin_dir_path( __FILE__ ) . 'assets/js/wp_plugin_allow_list_method_default.js', array( 'jquery' ), '1.0.0', true );
-			wp_enqueue_script( 'allow_list_method_default' );
+				wp_localize_script(
+					'allow_list_method_toggle',
+					'ajax_object2',
+					array(
+						'ajax_url' => admin_url( 'admin-ajax.php' ),
+						'nonce'    => wp_create_nonce( 'allow-list-method-toggle-nonce' ),
+					)
+				);
 
-			wp_localize_script(
-				'allow_list_method_default',
-				'ajax_object3',
-				array(
-					'ajax_url' => admin_url( 'admin-ajax.php' ),
-					'nonce'    => wp_create_nonce( 'allow-list-method-default-nonce' ),
-				)
-			);
+				wp_register_script( 'allow_list_method_default', plugin_dir_path( __FILE__ ) . 'assets/js/wp_plugin_allow_list_method_default.js', array( 'jquery' ), '1.0.0', true );
+				wp_enqueue_script( 'allow_list_method_default' );
+
+				wp_localize_script(
+					'allow_list_method_default',
+					'ajax_object3',
+					array(
+						'ajax_url' => admin_url( 'admin-ajax.php' ),
+						'nonce'    => wp_create_nonce( 'allow-list-method-default-nonce' ),
+						'default' => $this->allow_list_method
+					)
+				);
+			} 
 		}
 	}
 
@@ -136,26 +139,24 @@ class AdminPanel {
 	 * Register and enqueue styles for the admin panel in the dashboard.
 	 */
 	public function enqueue_plugin_allow_list_admin_styles() {
-		wp_register_style( 'plugin_allow_list_wp_admin_css', plugin_dir_path( __FILE__ ) . 'assets/css/plugin-allow-list-admin-panel.css', false, '1.0.0' );
-		wp_enqueue_style( 'plugin_allow_list_wp_admin_css' );
+		wp_register_style( 'plugin_allow_list_wp_admin', plugin_dir_path( __FILE__ ) . 'assets/css/plugin-allow-list-admin-panel.css', false, '1.0.0' );
+		wp_enqueue_style( 'plugin_allow_list_wp_admin' );
 	}
 
-
 	/**
-	 * Refresh the allow list by deleting the transient via admin-ajax
+	 * Set the allow list loading method to the value stored in the options table
 	 *
 	 * @since  1.0
 	 */
-	public function allow_list_refresh() {
+	public function allow_list_method_default() {
+		wp_verify_nonce( 'nonce', 'allow-list-method-default-nonce' );
 
-		wp_verify_nonce( 'security', 'allow-list-refresh-nonce' );
-		do_action( delete_transient( 'allow_listed_plugins' ) );
+		$response = array(
+			'message'                   => 'Allow list method default has been updated on the page',
+			'allow_list_method_default' => $this->allow_list_method,
+		);
 
-		// Load the allow list as a transient after deleting.
-		$allow_list = new WPPluginAllowList();
-		$allow_list->load_allow_list();
-
-		$response = array( 'message' => 'Allow List Transient Deleted' );
+		ob_clean();
 
 		// Send the response.
 		wp_send_json( $response );
@@ -165,18 +166,21 @@ class AdminPanel {
 	}
 
 	/**
-	 * Set the allow list loading method to the value stored in the options table
+	 * Refresh the allow list by deleting the transient via admin-ajax
 	 *
 	 * @since  1.0
 	 */
-	public function allow_list_method_default() {
+	public function allow_list_refresh() {
+		wp_verify_nonce( 'nonce', 'allow-list-refresh-nonce' );
+		do_action( delete_transient( 'allow_listed_plugins' ) );
 
-		wp_verify_nonce( 'security', 'allow-list-method-default-nonce' );
+		// Load the allow list as a transient after deleting.
+		$allow_list = new WPPluginAllowList();
+		$allow_list->load_allow_list();
 
-		$response = array(
-			'message'                   => 'Allow list method default has been updated on the page',
-			'allow_list_method_default' => $this->allow_list_method,
-		);
+		$response = array( 'message' => 'Allow List Transient Deleted' );
+
+		ob_clean();
 
 		// Send the response.
 		wp_send_json( $response );
@@ -191,8 +195,7 @@ class AdminPanel {
 	 * @since  1.0
 	 */
 	public function allow_list_method_toggle() {
-
-		wp_verify_nonce( 'security', 'allow-list-method-toggle-nonce' );
+		wp_verify_nonce( 'nonce', 'allow-list-method-toggle-nonce' );
 
 		// Set allow list method to file if it's not been set since this is triggered by a click to toggle method to file.
 		if ( 'url' === ( $this->allow_list_method ) ) {
@@ -205,9 +208,11 @@ class AdminPanel {
 		$this->allow_list_method = get_option( 'allow_list_method' );
 
 		$response = array(
-			'message'           => 'Allow List Method Changed',
+			'message'           => 'Allow List Method changed',
 			'allow_list_method' => $this->allow_list_method,
 		);
+
+		ob_clean();
 
 		// Send the response.
 		wp_send_json( $response );
